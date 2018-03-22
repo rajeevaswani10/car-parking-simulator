@@ -60,71 +60,109 @@ int llist_isempty(llist_t * list)
 
 LLIST_RC llist_insert_last(llist_t * list, int data)
 {
+	llist_node_t * node = create_node(data);
 
+	pthread_mutex_lock(&(l->mutex));
+
+	if(l->head == NULL) {
+		l->head = l->tail = node;
+	} else {
+		l->tail->next = node;
+		l->tail = node;
+	}
+
+	l->count++;
+	pthread_mutex_unlock(&(l->mutex));
 	return LLIST_SUCCESS;
 }
 
-LLIST_RC llist_insert_first(llist_t * list, int data)
+LLIST_RC llist_insert_first(llist_t * l, int data)
 {
 	llist_node_t * node = create_node(data);
 
 	pthread_mutex_lock(&(l->mutex));
 
+	if(l->head == NULL) {
+		l->head = l->tail = node;
+	} else {
+		node->next = l->head;
+		l->head = node;
+	}
 
-	return LLIST_SUCCESS;
-
-}
-
-LLIST_RC llist_insert_at_position(llist_t * list, int index, int data)
-{
-
-	return LLIST_SUCCESS;
-}
-
-LLIST_RC llist_delete_last(llist_t * list)
-{
-
+	l->count++;
+	pthread_mutex_unlock(&(l->mutex));
 	return LLIST_SUCCESS;
 }
 
-LLIST_RC llist_delete_first(llist_t * list)
+LLIST_RC llist_pop_element_at_pos(llist_t * l, unsigned int pos, int * data)
 {
+	llist_node_t * node = NULL;
 
+	if(l->head == NULL) return LLIST_EMPTY;
+
+	if(pos<0 || pos>(l->count-1))  return LLIST_OUT_OF_BOUNDS;
+
+	pthread_mutex_lock(&(l->mutex));
+
+	if(pos == 0) { //pop first element
+		node = l->head;
+		if(l->head == l->tail ) { // meaning only one node in list..
+			l->head = l->tail = NULL;
+		} else {
+			l->head = node->next;
+		}
+	} else (pos == (l->count-1) ) { //pop last element
+		llist_node_t * iter ;
+		for(iter = l->head ; iter->next == l->tail ; iter = iter->next) ;  // find parent node of tail..
+		node = l->tail;
+		iter->next = NULL;
+		l->tail = iter;
+	} else {
+		llist_node_t *iter, *iter1  ;
+		int i;
+		for(i=0, iter = iter1 = l->head ; i < pos ; i++, iter=iter1, iter1 = iter1->next) ;  // find node at pos
+		iter->next = iter1->next;
+		iter1->next = NULL;
+		node = iter1;
+	}
+
+	l->count--;
+	pthread_mutex_unlock(&(l->mutex));
+
+	*data = node->data;
+	free(node);
 	return LLIST_SUCCESS;
 }
 
-LLIST_RC llist_delete_at_position(llist_t * list, int index)
+LLIST_RC llist_pop_element_from_front(llist_t * l, int * data)
 {
-
-	return LLIST_SUCCESS;
+	return llist_pop_element_at_pos(l,0,data);
 }
 
-LLIST_RC llist_get_element(llist_t * list, unsigned index, int * data)
+LLIST_RC llist_pop_element_from_last(llist_t * l, int * data)
 {
-
-	return LLIST_SUCCESS;
+	return llist_pop_element_at_pos(l,(l->count-1),data);
 }
 
-LLIST_RC llist_pop_element_from_front(llist_t * list, int * data)
+LLIST_RC llist_pop_element_at_random(llist_t * l, int * data)
 {
+	/* generate random pos */
+	time_t t;
+	srand((unsigned) time(&t));
+	int pos = rand() % l->count ;
 
-	return LLIST_SUCCESS;
+	return llist_pop_element_at_pos(l, pos, data);
 }
 
-LLIST_RC llist_pop_element_from_last(llist_t * list, int * data)
+void llist_print(llist_t * l)
 {
-
-	return LLIST_SUCCESS;
+	llist_node_t * iter ;
+	for(iter = l->head ; iter != NULL; iter = iter->next)
+		printf("%d  ",iter->data);
 }
 
-void llist_print(llist_t * list)
+unsigned int llist_size(llist_t * l)
 {
-
-}
-
-unsigned int llist_size(llist_t * list)
-{
-
-	return LLIST_SUCCESS;
+	return l->count;
 }
 

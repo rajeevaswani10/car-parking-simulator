@@ -64,32 +64,32 @@ int main(){
 
 	llist_print(l);
 
-	rc = llist_pop_element_random(l,&data);
+	rc = llist_pop_element_at_random(l,&data);
 	assert(rc == LLIST_SUCCESS);
 	printf("popped - %d\n", data);
 	assert(llist_size(l) == 5);
 
-	rc = llist_pop_element_random(l,&data);
+	rc = llist_pop_element_at_random(l,&data);
 	assert(rc == LLIST_SUCCESS);
 	printf("popped - %d\n", data);
 	assert(llist_size(l) == 4);
 
-	rc = llist_pop_element_random(l,&data);
+	rc = llist_pop_element_at_random(l,&data);
 	assert(rc == LLIST_SUCCESS);
 	printf("popped - %d\n", data);
 	assert(llist_size(l) == 3);
 
-	rc = llist_pop_element_random(l,&data);
+	rc = llist_pop_element_at_random(l,&data);
 	assert(rc == LLIST_SUCCESS);
 	printf("popped - %d\n", data);
 	assert(llist_size(l) == 2);
 
-	rc = llist_pop_element_random(l,&data);
+	rc = llist_pop_element_at_random(l,&data);
 	assert(rc == LLIST_SUCCESS);
 	printf("popped - %d\n", data);
 	assert(llist_size(l) == 1);
 
-	rc = llist_pop_element_random(l,&data);
+	rc = llist_pop_element_at_random(l,&data);
 	assert(rc == LLIST_SUCCESS);
 	printf("popped - %d\n", data);
 	assert(llist_size(l) == 0);

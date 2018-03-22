@@ -34,19 +34,13 @@ LLIST_RC llist_insert_last(llist_t * list, int data);
 
 LLIST_RC llist_insert_first(llist_t * list, int data);
 
-LLIST_RC llist_insert_at_position(llist_t * list, int index, int data);
-
-LLIST_RC llist_delete_last(llist_t * list);
-
-LLIST_RC llist_delete_first(llist_t * list);
-
-LLIST_RC llist_delete_at_position(llist_t * list, int index);
-
 LLIST_RC llist_get_element(llist_t * list, unsigned index, int * data);
 
 LLIST_RC llist_pop_element_from_front(llist_t * list, int * data);
 
 LLIST_RC llist_pop_element_from_last(llist_t * list, int * data);
+
+LLIST_RC llist_pop_element_at_random(llist_t * list, int * data);
 
 void llist_print(llist_t * list);
 
