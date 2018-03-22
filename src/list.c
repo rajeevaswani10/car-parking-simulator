@@ -13,7 +13,7 @@
 
 struct llist_node_t {
 	int data;
-	struct list_node_t * next;
+	struct llist_node_t * next;
 };
 
 typedef struct llist_node_t 	llist_node_t;
@@ -31,7 +31,7 @@ struct llist_t {
 static llist_node_t * create_node (int data){
 	llist_node_t * node = (llist_node_t *)malloc(sizeof(llist_node_t));
 	node->data  = data;
-	node->next = null;
+	node->next = NULL;
 	return node;
 }
 
@@ -45,20 +45,32 @@ llist_t * llist_create()
 	return l;
 }
 
-void llist_destroy(llist_t * list)
+void llist_destroy(llist_t * l)
 {
-	//todo
+	llist_node_t * node = NULL;
+
+	pthread_mutex_lock(&(l->mutex));
+	while(l->head != NULL) {
+		node = l->head;
+		l->head = l->head->next;
+		free(node);
+	}
+	l->count = 0;
+	pthread_mutex_unlock(&(l->mutex));
+
+	pthread_mutex_destroy(&(l->mutex));
+	free(l);
 }
 
-int llist_isempty(llist_t * list)
+int llist_isempty(llist_t * l)
 {
-	if(list->head == NULL)
+	if(l->head == NULL)
 		return TRUE;
 	else
 		return FALSE;
 }
 
-LLIST_RC llist_insert_last(llist_t * list, int data)
+LLIST_RC llist_insert_last(llist_t * l, int data)
 {
 	llist_node_t * node = create_node(data);
 
@@ -98,9 +110,13 @@ LLIST_RC llist_pop_element_at_pos(llist_t * l, unsigned int pos, int * data)
 {
 	llist_node_t * node = NULL;
 
-	if(l->head == NULL) return LLIST_EMPTY;
+	if(l->head == NULL){
+		return LLIST_EMPTY;
+	}
 
-	if(pos<0 || pos>(l->count-1))  return LLIST_OUT_OF_BOUNDS;
+	if(pos<0 || pos>=l->count) {
+		return LLIST_OUT_OF_BOUNDS;
+	}
 
 	pthread_mutex_lock(&(l->mutex));
 
@@ -111,9 +127,9 @@ LLIST_RC llist_pop_element_at_pos(llist_t * l, unsigned int pos, int * data)
 		} else {
 			l->head = node->next;
 		}
-	} else (pos == (l->count-1) ) { //pop last element
+	} else if( pos == (l->count-1) ) { //pop last element
 		llist_node_t * iter ;
-		for(iter = l->head ; iter->next == l->tail ; iter = iter->next) ;  // find parent node of tail..
+		for(iter = l->head ; iter->next != l->tail ; iter = iter->next) ;  // find parent node of tail..
 		node = l->tail;
 		iter->next = NULL;
 		l->tail = iter;
@@ -159,6 +175,7 @@ void llist_print(llist_t * l)
 	llist_node_t * iter ;
 	for(iter = l->head ; iter != NULL; iter = iter->next)
 		printf("%d  ",iter->data);
+	printf("\n");
 }
 
 unsigned int llist_size(llist_t * l)
