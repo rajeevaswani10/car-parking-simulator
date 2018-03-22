@@ -8,41 +8,54 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "list.h"
 
-struct llist_node {
+struct llist_node_t {
 	int data;
 	struct list_node_t * next;
 };
 
-typedef struct llist_node		llist_node_t;
+typedef struct llist_node_t 	llist_node_t;
 
 
 struct llist_t {
-	llist_node_t * front;
+	llist_node_t * head;
 	llist_node_t * tail;
 	unsigned int count;
+
+	pthread_mutex_t mutex;
 };
 
-typedef struct llist_t 			llist_t;
 
-
+static llist_node_t * create_node (int data){
+	llist_node_t * node = (llist_node_t *)malloc(sizeof(llist_node_t));
+	node->data  = data;
+	node->next = null;
+	return node;
+}
 
 llist_t * llist_create()
 {
+	llist_t * l = (llist_t *)malloc(sizeof(llist_t));
+	l->head = l->tail = NULL;
+	l->count = 0;
+	pthread_mutex_init(&(l->mutex), NULL);
 
-	return NULL;
+	return l;
 }
 
 void llist_destroy(llist_t * list)
 {
-
+	//todo
 }
 
 int llist_isempty(llist_t * list)
 {
-
-	return TRUE;
+	if(list->head == NULL)
+		return TRUE;
+	else
+		return FALSE;
 }
 
 LLIST_RC llist_insert_last(llist_t * list, int data)
@@ -53,6 +66,11 @@ LLIST_RC llist_insert_last(llist_t * list, int data)
 
 LLIST_RC llist_insert_first(llist_t * list, int data)
 {
+	llist_node_t * node = create_node(data);
+
+	pthread_mutex_lock(&(l->mutex));
+
+
 	return LLIST_SUCCESS;
 
 }
