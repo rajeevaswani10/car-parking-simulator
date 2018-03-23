@@ -28,9 +28,9 @@ parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, uns
 
 void pb_destroy(parking_buffer_t * pb);
 
-PB_RC pb_park(parking_buffer_t * pb, int car_id);
+PB_RC pb_park(parking_buffer_t * pb, long car_id);
 
-PB_RC pb_unpark(parking_buffer_t * pb, int car_id);
+PB_RC pb_unpark(parking_buffer_t * pb, long car_id);
 
 unsigned get_free_slots_count(parking_buffer_t * pb );
 

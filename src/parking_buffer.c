@@ -66,25 +66,36 @@ void vhinfo_destroy (vhinfo_t * vh) {
 }
 
 static
+int request_for_parking(parking_buffer_t * pb, long car_id){
+	vhinfo_t * vh = vhinfo_create(car_id);
+	return queue_enqueue(pb->arrivals, vh);
+}
+
+static
 void * in_valet (void * arg) {
 	pthread_t id  = pthread_self();
 	parking_buffer_t * pb = (parking_buffer_t *)arg;
-	int slot;
-	int rc;
+	vhinfo_t * vh;
+	int i;
 
 	while(pb->status){
+		vh = queue_dequeue(pb->arrivals);
+		if(vh != NULL) {
+			for(i=0 ; i<pb->capacity ; i++){
+				parking_slot_t * slot = &(pb->slots[i]);
+				if(slot->vh == NULL){
+					slot->vh = vh;
+					break;
+				}
+			}
+			if(i == pb->capacity)
+				printf("ERROR: parking not found\n" );
+		}
 
-		//todo
 		sleep(1);
 	}
 
 	printf("thread id:%lu : stopped\n", id);
-}
-
-static
-int request_for_parking(long car_id){
-
-	return 0;
 }
 
 static
@@ -212,13 +223,12 @@ void pb_stop(parking_buffer_t * pb)
 	stop(pb);
 }
 
-PB_RC pb_park(parking_buffer_t * pb, int car_id)
+PB_RC pb_park(parking_buffer_t * pb, long car_id)
 {
-	//todo
-	return PB_SUCCESS;
+	return request_for_parking(pb,car_id);
 }
 
-PB_RC pb_unpark(parking_buffer_t * pb, int car_id)
+PB_RC pb_unpark(parking_buffer_t * pb, long car_id)
 {
 	//todo
 	return PB_SUCCESS;
@@ -238,7 +248,7 @@ void pb_print(parking_buffer_t *pb){
 	printf("Capacity:  %u | Occupied:  %u | Available:  %u ,", pb->capacity,(pb->capacity - pb->available),pb->available);
 	printf("\n");
 
-	for(i=0; i<pb->capacity; i++) printf("  %2d    ",(pb->slots)[i].id);
+	for(i=0; i<pb->capacity; i++) printf("  %2d    ",pb->slots[i].id);
 	printf("\n");
 
 	for(i=0; i<pb->capacity; i++) printf("--------");
