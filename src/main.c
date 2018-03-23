@@ -61,7 +61,7 @@ void * out_valet (void * arg)
 	int rc;
 
 	while(1){
-		rc = queue_dequeue(arrivals, &id);
+		rc = llist_pop_element_at_random(departures,&slot);
 		if(rc != 0) {
 			if (rc != LLIST_EMPTY)
 			{
@@ -73,18 +73,15 @@ void * out_valet (void * arg)
 		}
 		else
 		{
-			rc = pb_park(pb,id,&slot);
+			rc = pb_unpark(pb,&id,slot);
 			if(rc == 0) {
-				printf("slot - %d\n", slot);
-				llist_insert_last(departures, slot);
+				printf("id - %d\n", id);
 			}
 			else
 				printf("err: rc - %d\n", rc);
 		}
 		sleep(1);
 	}
-
-
 }
 
 void * monitor (void * arg)
@@ -127,7 +124,7 @@ int main(){
 	}
 
 	for(i=0;i<1;i++){
-		rc = pthread_create(&out_valet_t[i], NULL, out_valet, NULL);
+		//rc = pthread_create(&out_valet_t[i], NULL, out_valet, NULL);
 	}
 
 	rc= pthread_create(&request_generator, NULL, parking_request_generator, NULL);

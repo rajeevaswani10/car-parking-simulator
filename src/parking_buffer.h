@@ -13,8 +13,7 @@ typedef enum
     PB_PARKING_FULL,
     PB_PARKING_EMPTY,
     PB_ERROR                     /**< Error: Generic error*/
-
-} PB_RETCODE;
+} PB_RC;
 
 
 typedef struct parking_buffer_t    parking_buffer_t;
@@ -29,9 +28,9 @@ parking_buffer_t * pb_create(unsigned int capacity);
 
 void pb_destroy(parking_buffer_t * pb);
 
-PB_RETCODE pb_park(parking_buffer_t * pb, int car_id, int * slot);
+PB_RC pb_park(parking_buffer_t * pb, int car_id);
 
-PB_RETCODE pb_unpark(parking_buffer_t * pb, int car_id, int slot);
+PB_RC pb_unpark(parking_buffer_t * pb, int car_id);
 
 unsigned get_free_slots_count(parking_buffer_t * pb );
 

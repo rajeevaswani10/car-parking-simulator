@@ -12,7 +12,7 @@
 #include "list.h"
 
 struct llist_node_t {
-	int data;
+	void * data;
 	struct llist_node_t * next;
 };
 
@@ -28,7 +28,7 @@ struct llist_t {
 };
 
 
-static llist_node_t * create_node (int data){
+static llist_node_t * create_node (void * data){
 	llist_node_t * node = (llist_node_t *)malloc(sizeof(llist_node_t));
 	node->data  = data;
 	node->next = NULL;
@@ -70,7 +70,7 @@ int llist_isempty(llist_t * l)
 		return FALSE;
 }
 
-LLIST_RC llist_insert_last(llist_t * l, int data)
+LLIST_RC llist_insert_last(llist_t * l, void * data)
 {
 	llist_node_t * node = create_node(data);
 
@@ -88,7 +88,7 @@ LLIST_RC llist_insert_last(llist_t * l, int data)
 	return LLIST_SUCCESS;
 }
 
-LLIST_RC llist_insert_first(llist_t * l, int data)
+LLIST_RC llist_insert_first(llist_t * l, void * data)
 {
 	llist_node_t * node = create_node(data);
 
@@ -106,16 +106,17 @@ LLIST_RC llist_insert_first(llist_t * l, int data)
 	return LLIST_SUCCESS;
 }
 
-LLIST_RC llist_pop_element_at_pos(llist_t * l, unsigned int pos, int * data)
+void * llist_pop_element_at_pos(llist_t * l, unsigned int pos)
 {
+	void * data;
 	llist_node_t * node = NULL;
 
 	if(l->head == NULL){
-		return LLIST_EMPTY;
+		return NULL;
 	}
 
 	if(pos<0 || pos>=l->count) {
-		return LLIST_OUT_OF_BOUNDS;
+		return NULL;
 	}
 
 	pthread_mutex_lock(&(l->mutex));
@@ -145,37 +146,29 @@ LLIST_RC llist_pop_element_at_pos(llist_t * l, unsigned int pos, int * data)
 	l->count--;
 	pthread_mutex_unlock(&(l->mutex));
 
-	*data = node->data;
+	data = node->data;
 	free(node);
-	return LLIST_SUCCESS;
+	return data;
 }
 
-LLIST_RC llist_pop_element_from_front(llist_t * l, int * data)
+void * llist_pop_element_from_front(llist_t * l)
 {
-	return llist_pop_element_at_pos(l,0,data);
+	return llist_pop_element_at_pos(l,0);
 }
 
-LLIST_RC llist_pop_element_from_last(llist_t * l, int * data)
+void * llist_pop_element_from_last(llist_t * l)
 {
-	return llist_pop_element_at_pos(l,(l->count-1),data);
+	return llist_pop_element_at_pos(l,(l->count-1));
 }
 
-LLIST_RC llist_pop_element_at_random(llist_t * l, int * data)
+void * llist_pop_element_at_random(llist_t * l)
 {
 	/* generate random pos */
 	time_t t;
 	srand((unsigned) time(&t));
 	int pos = rand() % l->count ;
 
-	return llist_pop_element_at_pos(l, pos, data);
-}
-
-void llist_print(llist_t * l)
-{
-	llist_node_t * iter ;
-	for(iter = l->head ; iter != NULL; iter = iter->next)
-		printf("%d  ",iter->data);
-	printf("\n");
+	return llist_pop_element_at_pos(l, pos);
 }
 
 unsigned int llist_size(llist_t * l)
