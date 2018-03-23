@@ -14,14 +14,14 @@
 #include "queue.h"
 
 
-#define FREEIF(ptr)  (if(ptr != NULL) free(ptr))
+#define FREEIF(ptr)  if(ptr != NULL) free(ptr);
 
 
 struct vehicle_info_t {
 	long car_id;
 };
 
-typedef vehicle_info_t 	 vhinfo_t;
+typedef struct vehicle_info_t 	 vhinfo_t;
 
 
 struct parking_slot_t {
@@ -55,7 +55,7 @@ struct parking_buffer_t  {
 
 static
 vhinfo_t * vhinfo_create(long car_id) {
-	vhinfo_t * vh = (vh_info_t *)malloc(sizeof(vh_info_t));
+	vhinfo_t * vh = (vhinfo_t *)malloc(sizeof(vhinfo_t));
 	vh->car_id = car_id;
 	return vh;
 }
@@ -78,6 +78,13 @@ void * in_valet (void * arg) {
 		sleep(1);
 	}
 
+	printf("thread id:%lu : stopped\n", id);
+}
+
+static
+int request_for_parking(long car_id){
+
+	return 0;
 }
 
 static
@@ -92,6 +99,8 @@ void * out_valet (void * arg) {
 		//todo
 		sleep(1);
 	}
+
+	printf("thread id:%lu : stopped\n", id);
 }
 
 static
@@ -127,6 +136,7 @@ void start(parking_buffer_t * pb){
 
 static
 void stop(parking_buffer_t * pb){
+	int i;
 	if( !pb->status)
 	{
 		printf("already stopped.. \n");
@@ -142,6 +152,7 @@ void stop(parking_buffer_t * pb){
 	for(i=0; i<pb->out_valet_n;i++)
 		pthread_join(pb->out_valet_t[i], NULL);
 
+	printf("STOPPED\n");
 }
 
 parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, unsigned int out_valet_n)
@@ -159,7 +170,7 @@ parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, uns
 	//init with default values.
 	for(i=0; i<pb->capacity; i++) {
 		pb->slots[i].id = i+1;
-		pb->slots[i].vehicle_info = NULL;
+		pb->slots[i].vh = NULL;
 	}
 
 	pb->arrivals = queue_create();
@@ -176,16 +187,18 @@ parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, uns
 
 void pb_destroy(parking_buffer_t * pb)
 {
-	stop();
-	queue_destroy(arrivals);
-	queue_destroy(departures);
+	int i;
+
+	stop(pb);
+	queue_destroy(pb->arrivals);
+	queue_destroy(pb->departures);
 
 	for(i=0; i<pb->capacity; i++) {
 		vhinfo_destroy(pb->slots[i].vh);
 	}
 	FREEIF(pb->slots);
-	FREEIF(in_valet_t);
-	FREEIF(out_valet_t);
+	FREEIF(pb->in_valet_t);
+	FREEIF(pb->out_valet_t);
 	FREEIF(pb);
 }
 
@@ -218,21 +231,30 @@ unsigned int get_free_slots_count(parking_buffer_t * pb )
 
 void pb_print(parking_buffer_t *pb){
 	int i;
+	vhinfo_t * ptr;
 
 	printf("Car Park Map:");
 	printf("\n");
 	printf("Capacity:  %u | Occupied:  %u | Available:  %u ,", pb->capacity,(pb->capacity - pb->available),pb->available);
 	printf("\n");
 
-	for(i=0; i<pb->capacity; i++) printf("  %2d    ",i+1);
+	for(i=0; i<pb->capacity; i++) printf("  %2d    ",(pb->slots)[i].id);
 	printf("\n");
 
 	for(i=0; i<pb->capacity; i++) printf("--------");
 	printf("\n");
 
-	printf("[ %5d",(pb->buf)[0]);
+	ptr = pb->slots[0].vh;
+	if(ptr!=NULL)
+		printf("[ %5ld",ptr->car_id);
+	else
+		printf("[      ");
 	for(i=1; i<pb->capacity; i++){
-		printf(" | %5d",(pb->buf)[i]);
+		ptr = pb->slots[i].vh;
+		if(ptr!=NULL)
+			printf("| %6ld",ptr->car_id);
+		else
+			printf("|       ");
 	}
 
 	printf(" ]");

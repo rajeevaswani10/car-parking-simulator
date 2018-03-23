@@ -24,7 +24,7 @@ typedef struct parking_buffer_t    parking_buffer_t;
 #define OCCUPIED 	1	
 
 
-parking_buffer_t * pb_create(unsigned int capacity);
+parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, unsigned int out_valet_n);
 
 void pb_destroy(parking_buffer_t * pb);
 

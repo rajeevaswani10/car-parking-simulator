@@ -10,15 +10,11 @@ queue_t * queue_create();
 void queue_destroy( queue_t * q );
 
 // To Enqueue an integer
-int queue_enqueue(queue_t * q, int data);
+int queue_enqueue(queue_t * q, void * data);
 
 // To Dequeue an integer.
-int queue_dequeue(queue_t * q, int * data);
+void * queue_dequeue(queue_t * q);
 
 //size
 unsigned int queue_size(queue_t * q);
-
-//print
-void queue_print(queue_t * q);
-
 

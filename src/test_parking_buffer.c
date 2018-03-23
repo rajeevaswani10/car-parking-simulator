@@ -4,13 +4,11 @@
 int main()
 {
     PB_RC rc;
-	unsigned int slot;
-	parking_buffer_t *pb = pb_create((unsigned)15);
-    pb_print(pb);
+	parking_buffer_t *pb = pb_create((unsigned)15, 5, 2);
 
-    rc = pb_park(pb, 8102, &slot); pb_print(pb);
-    rc = pb_park(pb, 100, &slot); pb_print(pb);
-    rc = pb_park(pb, 2001, &slot); pb_print(pb);
-    pb_unpark(pb, 2001, slot); pb_print(pb);
+	pb_print(pb);
+
+	sleep(1);
+	pb_destroy(pb);
 }
 
