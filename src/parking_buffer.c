@@ -55,6 +55,18 @@ void vhinfo_destroy (vhinfo_t * vh) {
 	FREEIF(vh);
 }
 
+static
+void randomSleep(uLong maxDuration, uLong tid){
+	int retval;
+	time_t t;
+	/* Intializes random number generator */
+	srand((unsigned) time(&t) + tid); //to increase randomness per thread..
+
+	uLong duration =  rand() % maxDuration + 1;
+	//printf("tid %lu duration - %lu\n", tid,duration);
+	usleep(duration);
+}
+
 parking_buffer_t * pb_create(uLong capacity)
 {
 	parking_buffer_t * pb = (parking_buffer_t *)malloc(sizeof(parking_buffer_t));
@@ -99,6 +111,10 @@ PB_RC pb_park(parking_buffer_t * pb, uLong car_id, uLong * slot_id)
 	int i;
 
 	pthread_mutex_lock(&(pb->slots_mutx));
+
+	//sleep for sometime in this critical section.
+	randomSleep(200000, 0);
+
 	if(pb->available <= 0) {
 		pb->stats.n_park_failure ++;
 		pthread_mutex_unlock(&(pb->slots_mutx));
@@ -131,6 +147,10 @@ PB_RC pb_unpark(parking_buffer_t * pb, uLong car_id)
 	int i;
 
 	pthread_mutex_lock(&(pb->slots_mutx));
+
+	//sleep for sometime in this critical section.
+	randomSleep(200000, 0);
+
 	vhinfo_t * vh = NULL;
 	for(i=0; i<pb->capacity; i++){
 		parking_slot_t * slot = &(pb->slots[i]);

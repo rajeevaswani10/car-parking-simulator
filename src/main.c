@@ -15,8 +15,12 @@
 parking_buffer_t* pb ;
 llist_t * departures;
 
+uLong n_invalet;
 pthread_t * in_valet_t;
+
+uLong n_outvalet;
 pthread_t * out_valet_t;
+
 pthread_t monitor_t;
 pthread_barrier_t mybarrier;
 
@@ -34,18 +38,35 @@ long generate_car_id (long seed)
 }
 
 static
-void randomSleep(){
+void randomSleep(uLong maxDuration, uLong tid){
 	int retval;
 	time_t t;
 	/* Intializes random number generator */
-	srand((unsigned) time(&t));
-	usleep( rand() % 1000000 + 1 );
+	srand((unsigned) time(&t) + tid); //to increase randomness per thread..
+	uLong duration =  rand() % maxDuration + 1;
+	//printf("tid %lu duration - %lu\n", tid,duration);
+	usleep(duration);
+}
+
+static
+void join_threads(){
+	int rc,i;
+
+	for(i=0;i<n_invalet;i++){
+		pthread_join(in_valet_t[i], &rc);
+	}
+
+	for(i=0;i<n_outvalet;i++){
+		pthread_join(out_valet_t[i], &rc);
+	}
+
+	pthread_join(monitor_t, &rc);
 }
 
 static
 void * in_valet (void * arg){
 	static unsigned int id = 0;
-	unsigned long tid = pthread_self();
+	uLong tid = pthread_self();
 	int rc;
 
 	unsigned int myid = ++id;
@@ -53,20 +74,20 @@ void * in_valet (void * arg){
 	printf("Car-in-valet: %u with thread_id: %lu is initialized\n",myid,tid);
 	pthread_barrier_wait(&mybarrier);
 	while(1){
-		long car_id = generate_car_id(id);
-		unsigned int slot;
+		uLong car_id = generate_car_id(id);
+		uLong slot;
 		rc = pb_park(pb,car_id, &slot);
 		if(rc == PB_SUCCESS) {
-			printf("Car-in-valet %u - INFO - Car id: %ld in slot %u\n", myid, car_id, slot);
+			printf("Car-in-valet %u - INFO - Car id: %lu in slot %lu\n", myid, car_id, slot);
 			llist_insert_last(departures, (void *)car_id);
 		}
 		else
 		{
-			printf("Car-in-valet %u - ERROR - Car id: %ld fail to park. retcode: %d\n", myid, car_id, rc);
+			printf("Car-in-valet %u - ERROR - Car id: %lu fail to park. retcode: %d\n", myid, car_id, rc);
 		}
 
 		fflush(stdout);
-		randomSleep();
+		randomSleep(1000000 , tid);
 	}
 
 }
@@ -84,17 +105,17 @@ void * out_valet (void * arg)
 	while(1){
 		void * tmp = llist_pop_element_at_random(departures);
 		if(tmp != NULL){
-			long car_id = (long)tmp;
+			uLong car_id = (uLong)tmp;
 			rc = pb_unpark(pb,car_id);
 			if(rc == PB_SUCCESS) {
-				printf("Car-out-valet %u - INFO - Car id %ld has left\n", myid, car_id);
+				printf("Car-out-valet %u - INFO - Car id %lu has left\n", myid, car_id);
 			}
 			else
-				printf("Car-out-valet %u - ERROR - Car id %ld fail to un-park. retcode %d\n", myid, car_id, rc);
+				printf("Car-out-valet %u - ERROR - Car id %lu fail to un-park. retcode %d\n", myid, car_id, rc);
 		}
 
 		fflush(stdout);
-		randomSleep();
+		randomSleep(1000000 , tid);
 	}
 }
 
@@ -124,10 +145,24 @@ int main(int argc, char * argv[]){
 	}
 
 	char * ptr;
-	long capacity = strtol(argv[1], &ptr, 10);
-	long n_invalet = strtol(argv[2], &ptr, 10);
-	long n_outvalet = strtol(argv[3], &ptr, 10);
 
+	uLong capacity = strtol(argv[1], &ptr, 10);
+	n_invalet = strtol(argv[2], &ptr, 10);
+	n_outvalet = strtol(argv[3], &ptr, 10);
+
+	/* validation not working..
+	//do basic validation..
+	if(capacity <= 0){
+		printf("error: capacity shall be greater than 0\n");
+		return -1;
+	}
+
+	if(n_invalet <= 0 || n_outvalet <= 0){
+		printf("error: number of invalet threads or outvalet threads shall be greater than 0\n");
+		return -1;
+	}
+
+*/
 	pthread_barrier_init(&mybarrier, NULL, n_invalet + n_outvalet + 2);
 
 	pb = pb_create(capacity);
@@ -147,7 +182,8 @@ int main(int argc, char * argv[]){
 
 	pthread_barrier_wait(&mybarrier);
 
-	pthread_join(monitor_t, &rc); //else main thread will go out.
+	join_threads(); //else main thread will go out.
+	//pthread_join(monitor_t, &rc);
 
 	pthread_barrier_destroy(&mybarrier);
 
