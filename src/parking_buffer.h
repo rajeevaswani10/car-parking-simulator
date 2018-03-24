@@ -15,6 +15,13 @@ typedef enum
     PB_ERROR                     /**< Error: Generic error*/
 } PB_RC;
 
+struct parking_buffer_stats_t {
+	unsigned int n_park_success;
+	unsigned int n_park_failure;
+	unsigned int n_unpark_failure;
+};
+
+typedef struct parking_buffer_stats_t 	parking_buffer_stats_t;
 
 typedef struct parking_buffer_t    parking_buffer_t;
 
@@ -24,11 +31,11 @@ typedef struct parking_buffer_t    parking_buffer_t;
 #define OCCUPIED 	1	
 
 
-parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, unsigned int out_valet_n);
+parking_buffer_t * pb_create(unsigned int capacity);
 
 void pb_destroy(parking_buffer_t * pb);
 
-PB_RC pb_park(parking_buffer_t * pb, long car_id);
+PB_RC pb_park(parking_buffer_t * pb, long car_id, unsigned int * slot);
 
 PB_RC pb_unpark(parking_buffer_t * pb, long car_id);
 

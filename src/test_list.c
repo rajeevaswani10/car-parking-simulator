@@ -7,9 +7,15 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
 #include "list.h"
 
+static
+void * test_random(void * arg){
+	llist_t * l = (llist_t *)arg;
 
+
+}
 
 int main(){
 
@@ -21,32 +27,47 @@ int main(){
 	assert(llist_isempty(l) == TRUE);
 	assert(llist_size(l) == 0);
 
-	rc = llist_insert_first(l, (void *)5);
-	assert(rc == LLIST_SUCCESS);
-	rc = llist_insert_first(l, (void *)6);
-	assert(rc == LLIST_SUCCESS);
-	rc = llist_insert_last(l, (void *)10);
-	assert(rc == LLIST_SUCCESS);
-	rc = llist_insert_last(l, (void *)24);
+	int * ptr = (int *)malloc(sizeof(int));
+	*ptr = 5;
+	rc = llist_insert_first(l, (void *)ptr);
 	assert(rc == LLIST_SUCCESS);
 
-	data = (int)llist_pop_element_from_front(l);
-	assert(data == 6);
+	ptr = (int *)malloc(sizeof(int));
+	*ptr = 6;
+	rc = llist_insert_first(l, (void *)ptr);
+	assert(rc == LLIST_SUCCESS);
+
+	ptr = (int *)malloc(sizeof(int));
+	*ptr = 10;
+	rc = llist_insert_last(l, (void *)ptr);
+	assert(rc == LLIST_SUCCESS);
+
+	ptr = (int *)malloc(sizeof(int));
+	*ptr = 24;
+	rc = llist_insert_last(l, (void *)ptr);
+	assert(rc == LLIST_SUCCESS);
+
+	ptr = llist_pop_element_from_front(l);
+	assert(*ptr == 6);
 	assert(llist_size(l) == 3);
+	free(ptr);
 
-	data = (int)llist_pop_element_from_last(l);
-	assert(data == 24);
+	ptr = llist_pop_element_from_last(l);
+	assert(*ptr == 24);
 	assert(llist_size(l) == 2);
+	free(ptr);
 
 
-	data = (int)llist_pop_element_from_front(l);
-	assert(data == 5);
+	ptr = llist_pop_element_from_front(l);
+	assert(*ptr == 5);
 	assert(llist_size(l) == 1);
+	free(ptr);
 
-	data = (int)llist_pop_element_from_last(l);
+	ptr = llist_pop_element_from_last(l);
 	assert(rc == LLIST_SUCCESS);
-	assert(data == 10);
+	assert(*ptr == 10);
 	assert(llist_size(l) == 0);
+	free(ptr);
 
 
 	//pop random test

@@ -28,11 +28,51 @@ struct llist_t {
 };
 
 
-static llist_node_t * create_node (void * data){
+static
+llist_node_t * create_node (void * data){
 	llist_node_t * node = (llist_node_t *)malloc(sizeof(llist_node_t));
 	node->data  = data;
 	node->next = NULL;
 	return node;
+}
+
+static
+void * pop_element_at_pos(llist_t * l, unsigned int pos)
+{
+	void * data;
+	llist_node_t * node = NULL;
+
+	if(pos<0 || pos>=l->count) {
+		return NULL;
+	}
+
+	if(pos == 0) { //pop first element
+		node = l->head;
+		if(l->head == l->tail ) { // meaning only one node in list..
+			l->head = l->tail = NULL;
+		} else {
+			l->head = node->next;
+		}
+	} else if( pos == (l->count-1) ) { //pop last element
+		llist_node_t * iter ;
+		for(iter = l->head ; iter->next != l->tail ; iter = iter->next) ;  // find parent node of tail..
+		node = l->tail;
+		iter->next = NULL;
+		l->tail = iter;
+	} else {
+		llist_node_t *iter, *iter1  ;
+		int i;
+		for(i=0, iter = iter1 = l->head ; i < pos ; i++, iter=iter1, iter1 = iter1->next) ;  // find node at pos
+		iter->next = iter1->next;
+		iter1->next = NULL;
+		node = iter1;
+	}
+
+	l->count--;
+
+	data = node->data;
+	free(node);
+	return data;
 }
 
 llist_t * llist_create()
@@ -109,45 +149,22 @@ LLIST_RC llist_insert_first(llist_t * l, void * data)
 void * llist_pop_element_at_pos(llist_t * l, unsigned int pos)
 {
 	void * data;
-	llist_node_t * node = NULL;
+
+	pthread_mutex_lock(&(l->mutex));
 
 	if(l->head == NULL){
+		pthread_mutex_unlock(&(l->mutex));
 		return NULL;
 	}
 
 	if(pos<0 || pos>=l->count) {
+		pthread_mutex_unlock(&(l->mutex));
 		return NULL;
 	}
 
-	pthread_mutex_lock(&(l->mutex));
-
-	if(pos == 0) { //pop first element
-		node = l->head;
-		if(l->head == l->tail ) { // meaning only one node in list..
-			l->head = l->tail = NULL;
-		} else {
-			l->head = node->next;
-		}
-	} else if( pos == (l->count-1) ) { //pop last element
-		llist_node_t * iter ;
-		for(iter = l->head ; iter->next != l->tail ; iter = iter->next) ;  // find parent node of tail..
-		node = l->tail;
-		iter->next = NULL;
-		l->tail = iter;
-	} else {
-		llist_node_t *iter, *iter1  ;
-		int i;
-		for(i=0, iter = iter1 = l->head ; i < pos ; i++, iter=iter1, iter1 = iter1->next) ;  // find node at pos
-		iter->next = iter1->next;
-		iter1->next = NULL;
-		node = iter1;
-	}
-
-	l->count--;
+	data = pop_element_at_pos(l,pos);
 	pthread_mutex_unlock(&(l->mutex));
 
-	data = node->data;
-	free(node);
 	return data;
 }
 
@@ -163,12 +180,29 @@ void * llist_pop_element_from_last(llist_t * l)
 
 void * llist_pop_element_at_random(llist_t * l)
 {
+	void * data;
+
+	pthread_mutex_lock(&(l->mutex));
+
+	if(l->head == NULL){
+		pthread_mutex_unlock(&(l->mutex));
+		return NULL;
+	}
+
 	/* generate random pos */
 	time_t t;
 	srand((unsigned) time(&t));
 	int pos = rand() % l->count ;
 
-	return llist_pop_element_at_pos(l, pos);
+	if(pos<0 || pos>=l->count) {
+		pthread_mutex_unlock(&(l->mutex));
+		return NULL;
+	}
+
+	data = pop_element_at_pos(l,pos);
+	pthread_mutex_unlock(&(l->mutex));
+
+	return data;
 }
 
 unsigned int llist_size(llist_t * l)

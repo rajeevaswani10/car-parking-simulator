@@ -4,7 +4,7 @@
 int main()
 {
     PB_RC rc;
-	parking_buffer_t *pb = pb_create((unsigned)2, 1, 0);
+	parking_buffer_t *pb = pb_create((unsigned)10);
 
 	pb_print(pb);
 
@@ -15,6 +15,7 @@ int main()
 	pb_park(pb,1454);
 	sleep(1);
 	pb_print(pb);
+	pb_unpark(pb,1451);
 	sleep(1);
 	pb_print(pb);
 

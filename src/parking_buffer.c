@@ -35,22 +35,12 @@ typedef struct parking_slot_t	parking_slot_t ;
 struct parking_buffer_t  {
 
 	unsigned int capacity;
-	unsigned int in_valet_n;
-	unsigned int out_valet_n;
+    unsigned available;
 
 	parking_slot_t * slots;
 	pthread_mutex_t slots_mutx;
 
-    unsigned available;
-    pthread_mutex_t availble_mutx;
-
-    queue_t * arrivals;
-    queue_t * departures;
-
-    pthread_t * in_valet_t;
-    pthread_t * out_valet_t;
-
-    int status; //1 running  0 stopped
+	parking_buffer_stats_t stats;
 };
 
 static
@@ -65,116 +55,12 @@ void vhinfo_destroy (vhinfo_t * vh) {
 	FREEIF(vh);
 }
 
-static
-int request_for_parking(parking_buffer_t * pb, long car_id){
-	vhinfo_t * vh = vhinfo_create(car_id);
-	return queue_enqueue(pb->arrivals, vh);
-}
-
-static
-void * in_valet (void * arg) {
-	pthread_t id  = pthread_self();
-	parking_buffer_t * pb = (parking_buffer_t *)arg;
-	vhinfo_t * vh;
-	int i;
-
-	while(pb->status){
-		vh = queue_dequeue(pb->arrivals);
-		if(vh != NULL) {
-			for(i=0 ; i<pb->capacity ; i++){
-				parking_slot_t * slot = &(pb->slots[i]);
-				if(slot->vh == NULL){
-					slot->vh = vh;
-					break;
-				}
-			}
-			if(i == pb->capacity)
-				printf("ERROR: parking not found\n" );
-		}
-
-		sleep(1);
-	}
-
-	printf("thread id:%lu : stopped\n", id);
-}
-
-static
-void * out_valet (void * arg) {
-	pthread_t id  = pthread_self();
-	parking_buffer_t * pb = (parking_buffer_t *)arg;
-	int slot;
-	int rc;
-
-	while(pb->status){
-
-		//todo
-		sleep(1);
-	}
-
-	printf("thread id:%lu : stopped\n", id);
-}
-
-static
-void start(parking_buffer_t * pb){
-	int i;
-
-	if(pb->status)
-	{
-		printf("already running.. \n");
-		return;
-	}
-
-	pb->status = 1;
-
-	for(i=0; i<pb->in_valet_n;i++)
-	{
-		int rc = pthread_create(&(pb->in_valet_t[i]), NULL, in_valet, (void *)pb);
-		if(rc !=0 ) {
-			printf("FATAL ERR: failed to create thread\n");
-			return;
-		}
-	}
-
-	for(i=0; i<pb->out_valet_n;i++)
-	{
-		int rc = pthread_create(&(pb->out_valet_t[i]), NULL, out_valet, (void *)pb);
-		if(rc !=0 ) {
-			printf("FATAL ERR: failed to create thread\n");
-			return;
-		}
-	}
-}
-
-static
-void stop(parking_buffer_t * pb){
-	int i;
-	if( !pb->status)
-	{
-		printf("already stopped.. \n");
-		return;
-	}
-
-	pb->status = 0; //all threads loop should end coz of this.
-
-	//todo : wait for threads to stop here..
-	printf("stopping.....\n");
-	for(i=0; i<pb->in_valet_n;i++)
-		pthread_join(pb->in_valet_t[i], NULL);
-	for(i=0; i<pb->out_valet_n;i++)
-		pthread_join(pb->out_valet_t[i], NULL);
-
-	printf("STOPPED\n");
-}
-
-parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, unsigned int out_valet_n)
+parking_buffer_t * pb_create(unsigned int capacity)
 {
 	parking_buffer_t * pb = (parking_buffer_t *)malloc(sizeof(parking_buffer_t));
 	int i;
 
 	pb->capacity = capacity;
-	pb->in_valet_n = in_valet_n;
-	pb->out_valet_n = out_valet_n;
-
 	pb->slots = (parking_slot_t *)malloc(sizeof(parking_slot_t)*capacity);
 	pb->available = capacity;
 
@@ -184,15 +70,12 @@ parking_buffer_t * pb_create(unsigned int capacity, unsigned int in_valet_n, uns
 		pb->slots[i].vh = NULL;
 	}
 
-	pb->arrivals = queue_create();
-	pb->departures = queue_create();
+	//init stats
+	pb->stats.n_park_success = 0;
+	pb->stats.n_park_failure = 0;
+	pb->stats.n_unpark_failure = 0;
 
-	pb->status = 0;
-
-	pb->in_valet_t = (pthread_t *)malloc( sizeof(pthread_t)*in_valet_n );
-	pb->out_valet_t = (pthread_t *)malloc( sizeof(pthread_t)*out_valet_n );
-
-	start(pb);
+	pthread_mutex_init(&(pb->slots_mutx), NULL);
 	return pb;
 }
 
@@ -200,37 +83,72 @@ void pb_destroy(parking_buffer_t * pb)
 {
 	int i;
 
-	stop(pb);
-	queue_destroy(pb->arrivals);
-	queue_destroy(pb->departures);
-
+	pthread_mutex_lock(&(pb->slots_mutx));
 	for(i=0; i<pb->capacity; i++) {
 		vhinfo_destroy(pb->slots[i].vh);
 	}
 	FREEIF(pb->slots);
-	FREEIF(pb->in_valet_t);
-	FREEIF(pb->out_valet_t);
+	pthread_mutex_unlock(&(pb->slots_mutx));
+
+	pthread_mutex_destroy(&(pb->slots_mutx));
 	FREEIF(pb);
 }
 
-void pb_start(parking_buffer_t * pb)
+PB_RC pb_park(parking_buffer_t * pb, long car_id, unsigned int * slot_id)
 {
-	start(pb);
-}
+	int i;
 
-void pb_stop(parking_buffer_t * pb)
-{
-	stop(pb);
-}
+	pthread_mutex_lock(&(pb->slots_mutx));
+	if(pb->available <= 0) {
+		pb->stats.n_park_failure ++;
+		pthread_mutex_unlock(&(pb->slots_mutx));
+		return PB_PARKING_FULL;
+	}
 
-PB_RC pb_park(parking_buffer_t * pb, long car_id)
-{
-	return request_for_parking(pb,car_id);
+	vhinfo_t * vh = vhinfo_create(car_id);
+	for(i=0; i<pb->capacity; i++){
+		parking_slot_t * slot = &(pb->slots[i]);
+		if(slot->vh == NULL){
+			slot->vh = vh;
+			*slot_id = slot->id;
+			pb->available--;
+			break;
+		}
+	}
+	if(i == pb->capacity){
+		pb->stats.n_park_failure ++;
+		pthread_mutex_unlock(&(pb->slots_mutx));
+		return PB_ERROR;
+	}
+
+	(pb->stats).n_park_success ++;
+	pthread_mutex_unlock(&(pb->slots_mutx));
+	return PB_SUCCESS;
 }
 
 PB_RC pb_unpark(parking_buffer_t * pb, long car_id)
 {
-	//todo
+	int i;
+
+	pthread_mutex_lock(&(pb->slots_mutx));
+	vhinfo_t * vh = NULL;
+	for(i=0; i<pb->capacity; i++){
+		parking_slot_t * slot = &(pb->slots[i]);
+		if( slot->vh!= NULL && slot->vh->car_id == car_id ){
+			vh = slot->vh;
+			slot->vh = NULL;
+			pb->available++;
+			vhinfo_destroy(vh);
+			break;
+		}
+	}
+	if(i == pb->capacity){
+		pb->stats.n_unpark_failure ++;
+		pthread_mutex_unlock(&(pb->slots_mutx));
+		return PB_NOT_FOUND;
+	}
+
+	pthread_mutex_unlock(&(pb->slots_mutx));
 	return PB_SUCCESS;
 }
 
@@ -243,33 +161,44 @@ void pb_print(parking_buffer_t *pb){
 	int i;
 	vhinfo_t * ptr;
 
-	printf("Car Park Map:");
+	printf("\n\nCar Park Map:");
 	printf("\n");
-	printf("Capacity:  %u | Occupied:  %u | Available:  %u ,", pb->capacity,(pb->capacity - pb->available),pb->available);
-	printf("\n");
+	printf("Capacity:  %u | Occupied:  %u | Available:  %u | stats: %u , %u , %u ",
+			pb->capacity,(pb->capacity - pb->available),pb->available, (pb->stats).n_park_success, (pb->stats).n_park_failure,(pb->stats).n_unpark_failure);
+	printf("\n\n");
 
-	for(i=0; i<pb->capacity; i++) printf("  %2d    ",pb->slots[i].id);
-	printf("\n");
+	long capacity = pb->capacity;
+	unsigned row = 0;
+	while(capacity > 0){
+		long n = (capacity > 10)? 10 : capacity;
 
-	for(i=0; i<pb->capacity; i++) printf("--------");
-	printf("\n");
+		for(i=0; i<n; i++) printf("  %2d    ",pb->slots[row*10 + i].id);
+		printf("\n");
 
-	ptr = pb->slots[0].vh;
-	if(ptr!=NULL)
-		printf("[ %5ld",ptr->car_id);
-	else
-		printf("[      ");
-	for(i=1; i<pb->capacity; i++){
-		ptr = pb->slots[i].vh;
+		for(i=0; i<n; i++) printf("--------");
+		printf("\n");
+
+		ptr = pb->slots[row*10].vh;
 		if(ptr!=NULL)
-			printf("| %6ld",ptr->car_id);
+			printf("[ %5ld",ptr->car_id);
 		else
-			printf("|       ");
-	}
+			printf("[      ");
+		for(i=1; i<n; i++){
+			ptr = pb->slots[row*10 + i].vh;
+			if(ptr!=NULL)
+				printf("| %6ld",ptr->car_id);
+			else
+				printf("|       ");
+		}
 
-	printf(" ]");
-	printf("\n");
-	for(i=0; i<pb->capacity; i++) printf("--------");
-	printf("\n");
+		printf(" ]");
+		printf("\n");
+		for(i=0; i<n; i++) printf("--------");
+		printf("\n");
+
+		capacity = capacity - n;
+		row++;
+	}
+	printf("\n\n\n");
 }
 

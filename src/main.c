@@ -13,77 +13,84 @@
 
 
 parking_buffer_t* pb ;
-queue_t * arrivals;
 llist_t * departures;
 
-pthread_t in_valet_t[5];
-pthread_t out_valet_t[2];
-
-pthread_t request_generator;
+pthread_t * in_valet_t;
+pthread_t * out_valet_t;
 
 pthread_t monitor_t;
 
+
+static
+long generate_car_id (long seed)
+{
+//	int retval;
+//	time_t t;
+//	/* Intializes random number generator */
+//	srand(((unsigned) time(&t)) + seed);
+
+//	return rand() % 99999 + 1000;
+	static unsigned long n = 1000;
+	return n++;
+}
+
+static
+void randomSleep(){
+	int retval;
+	time_t t;
+	/* Intializes random number generator */
+	srand((unsigned) time(&t));
+
+	usleep(rand() % 1000000);
+}
+
+static
 void * in_valet (void * arg){
-	int id;
-	int slot;
+	static unsigned int id = 0;
 	int rc;
 
+	unsigned int myid = ++id;
 	while(1){
-		rc = queue_dequeue(arrivals, &id);
-		if(rc != 0) {
-			if (rc != LLIST_EMPTY)
-			{
-				printf("error fetching item.. \n");
-				break;
-			}
-			else
-				printf("queue empty\n");
+		long car_id = generate_car_id(id);
+		unsigned int slot;
+		rc = pb_park(pb,car_id, &slot);
+		if(rc == PB_SUCCESS) {
+			printf("Car-in-valet %u - INFO - Car id: %ld in slot %u\n", myid, car_id, slot);
+			llist_insert_last(departures, (void *)car_id);
 		}
 		else
 		{
-			rc = pb_park(pb,id,&slot);
-			if(rc == 0) {
-				printf("slot - %d\n", slot);
-				llist_insert_last(departures, slot);
-			}
-			else
-				printf("err: rc - %d\n", rc);
+			printf("Car-in-valet %u - ERROR - Car id: %ld fail to park. retcode: %d\n", myid, car_id, rc);
 		}
-		sleep(1);
+
+		randomSleep();
 	}
 
 }
 
+static
 void * out_valet (void * arg)
 {
-	int id;
-	int slot;
+	static unsigned int id = 0;
 	int rc;
 
+	unsigned int myid = ++id;
 	while(1){
-		rc = llist_pop_element_at_random(departures,&slot);
-		if(rc != 0) {
-			if (rc != LLIST_EMPTY)
-			{
-				printf("error fetching item.. \n");
-				break;
+		void * tmp = llist_pop_element_at_random(departures);
+		if(tmp != NULL){
+			long car_id = (long)tmp;
+			rc = pb_unpark(pb,car_id);
+			if(rc == PB_SUCCESS) {
+				printf("Car-out-valet %u - INFO - Car id %ld has left\n", myid, car_id);
 			}
 			else
-				printf("queue empty\n");
+				printf("Car-out-valet %u - ERROR - Car id %ld fail to un-park. retcode %d\n", myid, car_id, rc);
 		}
-		else
-		{
-			rc = pb_unpark(pb,&id,slot);
-			if(rc == 0) {
-				printf("id - %d\n", id);
-			}
-			else
-				printf("err: rc - %d\n", rc);
-		}
-		sleep(1);
+		randomSleep();
 	}
 }
 
+static
 void * monitor (void * arg)
 {
 	while(1){
@@ -92,49 +99,44 @@ void * monitor (void * arg)
 	}
 }
 
-void * parking_request_generator (void * arg)
-{
-	int retval;
-	time_t t;
 
-	/* Intializes random number generator */
-	srand((unsigned) time(&t));
-
-	while(1){
-		int id = rand() % 9999 + 1;
-		//printf("pushing item - %d\n", id);
-	    retval = queue_enqueue(arrivals, id);
-		sleep(1);
-	}
-
-}
-
-
-int main(){
+int main(int argc, char * argv[]){
 
 	int rc;
 	int i;
+	printf("argc %d\n", argc);
+	printf("argv %s\n", argv[1]);
 
-	pb = pb_create(15);
-	arrivals = queue_create();
+	if(argc != 4) //including file name
+	{
+		printf("error : insufficient parameters\n usage for eg.: <program>  10 4 1 \n\n");
+		return -1;
+	}
+
+	char * ptr;
+	long capacity = strtol(argv[1], &ptr, 10);
+	long n_invalet = strtol(argv[2], &ptr, 10);
+	long n_outvalet = strtol(argv[3], &ptr, 10);
+
+
+	pb = pb_create(capacity);
 	departures = llist_create();
 
-	for(i=0;i<1;i++){
+	in_valet_t = (pthread_t *)malloc(sizeof(pthread_t)*n_invalet);
+	for(i=0;i<n_invalet;i++){
 		rc = pthread_create(&in_valet_t[i], NULL, in_valet, NULL);
 	}
 
-	for(i=0;i<1;i++){
-		//rc = pthread_create(&out_valet_t[i], NULL, out_valet, NULL);
+	out_valet_t = (pthread_t *)malloc(sizeof(pthread_t)*n_outvalet);
+	for(i=0; i<n_outvalet; i++){
+		rc = pthread_create(&out_valet_t[i], NULL, out_valet, NULL);
 	}
-
-	rc= pthread_create(&request_generator, NULL, parking_request_generator, NULL);
 
 	rc= pthread_create(&monitor_t, NULL, monitor, NULL);
 
 
 	pthread_join(monitor_t, &rc); //else main thread will go out.
 
-	queue_destroy(arrivals);
 	llist_destroy(departures);
 	pb_destroy(pb);
 }
