@@ -4,7 +4,7 @@
 do make to generate 'cps' executable.
 
 run like 
-./cps  <capacity>  <invalet num>  <outvalet num>
+./cps  capacity  num-invalet  num-outvalet
 
 for e.g. 
 
