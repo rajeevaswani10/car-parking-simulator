@@ -18,14 +18,14 @@
 
 
 struct vehicle_info_t {
-	long car_id;
+	uLong car_id;
 };
 
 typedef struct vehicle_info_t 	 vhinfo_t;
 
 
 struct parking_slot_t {
-	unsigned int id;
+	uLong id;
 	vhinfo_t * vh;
 };
 
@@ -34,8 +34,8 @@ typedef struct parking_slot_t	parking_slot_t ;
 
 struct parking_buffer_t  {
 
-	unsigned int capacity;
-    unsigned available;
+	uLong capacity;
+	uLong available;
 
 	parking_slot_t * slots;
 	pthread_mutex_t slots_mutx;
@@ -44,7 +44,7 @@ struct parking_buffer_t  {
 };
 
 static
-vhinfo_t * vhinfo_create(long car_id) {
+vhinfo_t * vhinfo_create(uLong car_id) {
 	vhinfo_t * vh = (vhinfo_t *)malloc(sizeof(vhinfo_t));
 	vh->car_id = car_id;
 	return vh;
@@ -55,7 +55,7 @@ void vhinfo_destroy (vhinfo_t * vh) {
 	FREEIF(vh);
 }
 
-parking_buffer_t * pb_create(unsigned int capacity)
+parking_buffer_t * pb_create(uLong capacity)
 {
 	parking_buffer_t * pb = (parking_buffer_t *)malloc(sizeof(parking_buffer_t));
 	int i;
@@ -94,7 +94,7 @@ void pb_destroy(parking_buffer_t * pb)
 	FREEIF(pb);
 }
 
-PB_RC pb_park(parking_buffer_t * pb, long car_id, unsigned int * slot_id)
+PB_RC pb_park(parking_buffer_t * pb, uLong car_id, uLong * slot_id)
 {
 	int i;
 
@@ -126,7 +126,7 @@ PB_RC pb_park(parking_buffer_t * pb, long car_id, unsigned int * slot_id)
 	return PB_SUCCESS;
 }
 
-PB_RC pb_unpark(parking_buffer_t * pb, long car_id)
+PB_RC pb_unpark(parking_buffer_t * pb, uLong car_id)
 {
 	int i;
 
@@ -152,27 +152,28 @@ PB_RC pb_unpark(parking_buffer_t * pb, long car_id)
 	return PB_SUCCESS;
 }
 
-unsigned int get_free_slots_count(parking_buffer_t * pb )
+uLong pb_get_free_slots_count(parking_buffer_t * pb )
 {
 	return pb->available;
 }
 
 void pb_print(parking_buffer_t *pb){
 	int i;
+	int COLS_PER_ROW = 10;
 	vhinfo_t * ptr;
 
 	printf("\n\nCar Park Map:");
 	printf("\n");
-	printf("Capacity:  %u | Occupied:  %u | Available:  %u | stats: %u , %u , %u ",
+	printf("Capacity:  %lu | Occupied:  %lu | Available:  %lu | stats:  park_ok:%lu , park_err:%lu , unpark_err:%lu ",
 			pb->capacity,(pb->capacity - pb->available),pb->available, (pb->stats).n_park_success, (pb->stats).n_park_failure,(pb->stats).n_unpark_failure);
 	printf("\n\n");
 
-	long capacity = pb->capacity;
+	uLong capacity = pb->capacity;
 	unsigned row = 0;
 	while(capacity > 0){
-		long n = (capacity > 10)? 10 : capacity;
+		long n = (capacity > COLS_PER_ROW) ? COLS_PER_ROW : capacity;
 
-		for(i=0; i<n; i++) printf("  %2d    ",pb->slots[row*10 + i].id);
+		for(i=0; i<n; i++) printf("   %2lu   ",pb->slots[row*COLS_PER_ROW + i].id);
 		printf("\n");
 
 		for(i=0; i<n; i++) printf("--------");
@@ -180,13 +181,13 @@ void pb_print(parking_buffer_t *pb){
 
 		ptr = pb->slots[row*10].vh;
 		if(ptr!=NULL)
-			printf("[ %5ld",ptr->car_id);
+			printf("[ %5lu",ptr->car_id);
 		else
 			printf("[      ");
 		for(i=1; i<n; i++){
 			ptr = pb->slots[row*10 + i].vh;
 			if(ptr!=NULL)
-				printf("| %6ld",ptr->car_id);
+				printf("| %6lu",ptr->car_id);
 			else
 				printf("| %6d",0);
 		}
@@ -194,7 +195,7 @@ void pb_print(parking_buffer_t *pb){
 		printf(" ]");
 		printf("\n");
 		for(i=0; i<n; i++) printf("--------");
-		printf("\n");
+		printf("\n\n");
 
 		capacity = capacity - n;
 		row++;

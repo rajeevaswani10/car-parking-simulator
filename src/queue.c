@@ -32,20 +32,20 @@ void queue_destroy( queue_t * q )
 	free(q);
 }
 
-// To Enqueue an integer
+// To Enqueue a data
 int queue_enqueue(queue_t * q, void * data)
 {
 	return llist_insert_last(q->list, data);
 }
 
-// To Dequeue an integer.
+// To Dequeue a data.
 void * queue_dequeue(queue_t * q)
 {
 	return llist_pop_element_from_front(q->list);
 }
 
 //size
-unsigned int queue_size(queue_t * q)
+uLong queue_size(queue_t * q)
 {
 	return llist_size(q->list);
 }

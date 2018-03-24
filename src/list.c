@@ -3,7 +3,7 @@
  * File: list.c
  * Author: Rajeev
  *
- * Desc: thread safe list implementation in c
+ * Desc: thread safe list
  */
 
 #include <stdio.h>
@@ -22,7 +22,7 @@ typedef struct llist_node_t 	llist_node_t;
 struct llist_t {
 	llist_node_t * head;
 	llist_node_t * tail;
-	unsigned int count;
+	uLong count;
 
 	pthread_mutex_t mutex;
 };
@@ -205,7 +205,7 @@ void * llist_pop_element_at_random(llist_t * l)
 	return data;
 }
 
-unsigned int llist_size(llist_t * l)
+uLong llist_size(llist_t * l)
 {
 	return l->count;
 }

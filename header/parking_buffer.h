@@ -1,10 +1,12 @@
+/*
+ * parking_buffer.h
+ *
+ *  Created on: Mar 21, 2018
+ *      Author: rajeev
+ */
 
 #ifndef _PARKING_BUFFER_H_
 #define _PARKING_BUFFER_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef enum
 {
@@ -15,32 +17,51 @@ typedef enum
     PB_ERROR                     /**< Error: Generic error*/
 } PB_RC;
 
+typedef unsigned long 	uLong;
+
 struct parking_buffer_stats_t {
-	unsigned int n_park_success;
-	unsigned int n_park_failure;
-	unsigned int n_unpark_failure;
+	uLong n_park_success;
+	uLong n_park_failure;
+	uLong n_unpark_failure;
 };
 
 typedef struct parking_buffer_stats_t 	parking_buffer_stats_t;
 
 typedef struct parking_buffer_t    parking_buffer_t;
 
+/**
+* @brief creates parking buffer
+*
+*/
+parking_buffer_t * pb_create(uLong capacity);
 
-#define NOT_FOUND	-1	
-#define EMPTY 		0	
-#define OCCUPIED 	1	
-
-
-parking_buffer_t * pb_create(unsigned int capacity);
-
+/**
+* @brief destroy parking buffer
+*
+*/
 void pb_destroy(parking_buffer_t * pb);
 
-PB_RC pb_park(parking_buffer_t * pb, long car_id, unsigned int * slot);
+/**
+* @brief park the car makes entry in the buffer
+*
+*/
+PB_RC pb_park(parking_buffer_t * pb, uLong car_id, uLong * slot);
 
-PB_RC pb_unpark(parking_buffer_t * pb, long car_id);
+/**
+* @brief unpark the car.. removes entry from the buffer
+*
+*/
+PB_RC pb_unpark(parking_buffer_t * pb, uLong car_id);
 
-unsigned get_free_slots_count(parking_buffer_t * pb );
+/**
+* @brief
+*
+*/
+uLong pb_get_free_slots_count(parking_buffer_t * pb );
 
+/**
+ * @brief print buffer
+ */
 void pb_print(parking_buffer_t * pb );
 
 #endif

@@ -8,14 +8,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
-#include "list.h"
-
-static
-void * test_random(void * arg){
-	llist_t * l = (llist_t *)arg;
-
-
-}
+#include <header/list.h>
 
 int main(){
 

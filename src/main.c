@@ -1,8 +1,8 @@
 /*********
-*  Car parking simulator
-* Author: Rajeev
+*  @brief Car parking simulator
+* 
 *
-*/
+**************/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +20,6 @@ pthread_t * out_valet_t;
 pthread_t monitor_t;
 pthread_barrier_t mybarrier;
 
-
 static
 long generate_car_id (long seed)
 {
@@ -30,7 +29,7 @@ long generate_car_id (long seed)
 //	srand(((unsigned) time(&t)) + seed);
 
 //	return rand() % 99999 + 1000;
-	static unsigned long n = 1000;
+	static uLong  n = 1000;
 	return n++;
 }
 
@@ -40,8 +39,7 @@ void randomSleep(){
 	time_t t;
 	/* Intializes random number generator */
 	srand((unsigned) time(&t));
-
-	usleep(rand() % 1000000);
+	usleep( rand() % 1000000 + 1 );
 }
 
 static
@@ -67,6 +65,7 @@ void * in_valet (void * arg){
 			printf("Car-in-valet %u - ERROR - Car id: %ld fail to park. retcode: %d\n", myid, car_id, rc);
 		}
 
+		fflush(stdout);
 		randomSleep();
 	}
 
@@ -93,6 +92,8 @@ void * out_valet (void * arg)
 			else
 				printf("Car-out-valet %u - ERROR - Car id %ld fail to un-park. retcode %d\n", myid, car_id, rc);
 		}
+
+		fflush(stdout);
 		randomSleep();
 	}
 }
@@ -105,6 +106,7 @@ void * monitor (void * arg)
 	pthread_barrier_wait(&mybarrier);
 	while(1){
 		pb_print(pb);
+		fflush(stdout);
 		sleep(1);
 	}
 }
@@ -114,8 +116,6 @@ int main(int argc, char * argv[]){
 
 	int rc;
 	int i;
-	printf("argc %d\n", argc);
-	printf("argv %s\n", argv[1]);
 
 	if(argc != 4) //including file name
 	{

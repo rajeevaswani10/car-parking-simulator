@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+typedef unsigned long 	uLong;
+
 typedef struct queue_t queue_t;
 
 //create queue
@@ -16,5 +18,5 @@ int queue_enqueue(queue_t * q, void * data);
 void * queue_dequeue(queue_t * q);
 
 //size
-unsigned int queue_size(queue_t * q);
+uLong queue_size(queue_t * q);
 
