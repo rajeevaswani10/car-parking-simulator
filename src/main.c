@@ -6,11 +6,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include <header/parking_buffer.h>
 #include <header/list.h>
 #include <header/queue.h>
 
+
+static
+volatile int keepRunning = 1;
 
 parking_buffer_t* pb ;
 llist_t * departures;
@@ -48,19 +52,24 @@ void randomSleep(uLong maxDuration, uLong tid){
 	usleep(duration);
 }
 
+void sigHandler(int dummy) {
+	//printf("SIG HANDLER in action *********************\n");
+	keepRunning = 0;
+}
+
 static
 void join_threads(){
 	int rc,i;
 
 	for(i=0;i<n_invalet;i++){
-		pthread_join(in_valet_t[i], &rc);
+		rc = pthread_join(in_valet_t[i], NULL);
 	}
 
 	for(i=0;i<n_outvalet;i++){
-		pthread_join(out_valet_t[i], &rc);
+		rc = pthread_join(out_valet_t[i], NULL);
 	}
 
-	pthread_join(monitor_t, &rc);
+	rc = pthread_join(monitor_t, NULL);
 }
 
 static
@@ -73,7 +82,8 @@ void * in_valet (void * arg){
 
 	printf("Car-in-valet: %u with thread_id: %lu is initialized\n",myid,tid);
 	pthread_barrier_wait(&mybarrier);
-	while(1){
+	while( keepRunning )
+	{
 		uLong car_id = generate_car_id(id);
 		uLong slot;
 		rc = pb_park(pb,car_id, &slot);
@@ -89,6 +99,7 @@ void * in_valet (void * arg){
 		fflush(stdout);
 		randomSleep(1000000 , tid);
 	}
+	printf("Car-in-valet: %u with thread_id: %lu is shutting down\n",myid,tid);
 
 }
 
@@ -102,7 +113,8 @@ void * out_valet (void * arg)
 	unsigned int myid = ++id;
 	printf("Car-out-valet: %u with thread_id: %lu is initialized\n",myid,tid);
 	pthread_barrier_wait(&mybarrier);
-	while(1){
+	while(keepRunning)
+	{
 		void * tmp = llist_pop_element_at_random(departures);
 		if(tmp != NULL){
 			uLong car_id = (uLong)tmp;
@@ -117,6 +129,7 @@ void * out_valet (void * arg)
 		fflush(stdout);
 		randomSleep(1000000 , tid);
 	}
+	printf("Car-out-valet: %u with thread_id: %lu is shutting down\n",myid,tid);
 }
 
 static
@@ -125,11 +138,12 @@ void * monitor (void * arg)
 	unsigned long tid = pthread_self();
 	printf("Monitor thread with thread_id: %lu is initialized\n", tid);
 	pthread_barrier_wait(&mybarrier);
-	while(1){
+	while(keepRunning){
 		pb_print(pb);
 		fflush(stdout);
 		sleep(1);
 	}
+	printf("Monitor thread with thread_id: %lu is shutting down\n", tid);
 }
 
 
@@ -163,6 +177,8 @@ int main(int argc, char * argv[]){
 	}
 
 */
+	signal(SIGINT, sigHandler);
+
 	pthread_barrier_init(&mybarrier, NULL, n_invalet + n_outvalet + 2);
 
 	pb = pb_create(capacity);
@@ -183,11 +199,11 @@ int main(int argc, char * argv[]){
 	pthread_barrier_wait(&mybarrier);
 
 	join_threads(); //else main thread will go out.
-	//pthread_join(monitor_t, &rc);
 
 	pthread_barrier_destroy(&mybarrier);
-
 	llist_destroy(departures);
+
 	pb_destroy(pb);
+	printf("\n****************End of main thread***********\n");
 }
 
