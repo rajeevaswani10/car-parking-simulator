@@ -10,8 +10,6 @@
 
 #include <header/parking_buffer.h>
 #include <header/list.h>
-#include <header/queue.h>
-
 
 static
 volatile int keepRunning = 1;

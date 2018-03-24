@@ -11,7 +11,6 @@
 #include <pthread.h>
 
 #include <header/parking_buffer.h>
-#include <header/queue.h>
 
 
 #define FREEIF(ptr)  if(ptr != NULL) free(ptr);
@@ -65,6 +64,28 @@ void randomSleep(uLong maxDuration, uLong tid){
 	uLong duration =  rand() % maxDuration + 1;
 	//printf("tid %lu duration - %lu\n", tid,duration);
 	usleep(duration);
+}
+
+static
+parking_buffer_t * snapshot (parking_buffer_t * pb){
+	int i;
+	parking_buffer_t * tmp = pb_create(pb->capacity);
+
+	pthread_mutex_lock(&(pb->slots_mutx));
+	tmp->available = pb->available;
+	tmp->stats = pb->stats;
+
+	for(i=0; i<pb->capacity; i++){
+		parking_slot_t * slot = &(pb->slots[i]);
+		if( slot->vh!= NULL ){
+			vhinfo_t * vh = vhinfo_create(slot->vh->car_id);
+			parking_slot_t * tmp_slot = &(tmp->slots[i]) ;
+			tmp_slot->vh = vh;
+		}
+	}
+
+	pthread_mutex_unlock(&(pb->slots_mutx));
+	return tmp;
 }
 
 parking_buffer_t * pb_create(uLong capacity)
@@ -177,8 +198,11 @@ uLong pb_get_free_slots_count(parking_buffer_t * pb )
 	return pb->available;
 }
 
-void pb_print(parking_buffer_t *pb){
+void pb_print(parking_buffer_t *parking_buffer){
 	int i;
+
+	parking_buffer_t * pb = snapshot(parking_buffer);
+
 	int COLS_PER_ROW = 10;
 	vhinfo_t * ptr;
 
