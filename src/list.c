@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "list.h"
+#include <header/list.h>
 
 struct llist_node_t {
 	void * data;

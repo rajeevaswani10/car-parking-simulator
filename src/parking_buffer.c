@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#include "parking_buffer.h"
-#include "queue.h"
+#include <header/parking_buffer.h>
+#include <header/queue.h>
 
 
 #define FREEIF(ptr)  if(ptr != NULL) free(ptr);

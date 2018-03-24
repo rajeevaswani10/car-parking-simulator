@@ -8,9 +8,9 @@
  */
 
 
-#include<stdio.h>
-#include "list.h"
-#include "queue.h"
+#include <stdio.h>
+#include <header/list.h>
+#include <header/queue.h>
 
 
 struct queue_t  {

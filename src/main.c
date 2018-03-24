@@ -4,12 +4,12 @@
 *
 */
 
-#include<stdio.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "parking_buffer.h"
-#include "list.h"
-#include "queue.h"
+#include <header/parking_buffer.h>
+#include <header/list.h>
+#include <header/queue.h>
 
 
 parking_buffer_t* pb ;
