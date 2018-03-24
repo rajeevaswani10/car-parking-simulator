@@ -17,8 +17,8 @@ llist_t * departures;
 
 pthread_t * in_valet_t;
 pthread_t * out_valet_t;
-
 pthread_t monitor_t;
+pthread_barrier_t mybarrier;
 
 
 static
@@ -47,9 +47,13 @@ void randomSleep(){
 static
 void * in_valet (void * arg){
 	static unsigned int id = 0;
+	unsigned long tid = pthread_self();
 	int rc;
 
 	unsigned int myid = ++id;
+
+	printf("Car-in-valet: %u with thread_id: %lu is initialized\n",myid,tid);
+	pthread_barrier_wait(&mybarrier);
 	while(1){
 		long car_id = generate_car_id(id);
 		unsigned int slot;
@@ -72,9 +76,12 @@ static
 void * out_valet (void * arg)
 {
 	static unsigned int id = 0;
+	unsigned long tid = pthread_self();
 	int rc;
 
 	unsigned int myid = ++id;
+	printf("Car-out-valet: %u with thread_id: %lu is initialized\n",myid,tid);
+	pthread_barrier_wait(&mybarrier);
 	while(1){
 		void * tmp = llist_pop_element_at_random(departures);
 		if(tmp != NULL){
@@ -93,6 +100,9 @@ void * out_valet (void * arg)
 static
 void * monitor (void * arg)
 {
+	unsigned long tid = pthread_self();
+	printf("Monitor thread with thread_id: %lu is initialized\n", tid);
+	pthread_barrier_wait(&mybarrier);
 	while(1){
 		pb_print(pb);
 		sleep(1);
@@ -118,6 +128,7 @@ int main(int argc, char * argv[]){
 	long n_invalet = strtol(argv[2], &ptr, 10);
 	long n_outvalet = strtol(argv[3], &ptr, 10);
 
+	pthread_barrier_init(&mybarrier, NULL, n_invalet + n_outvalet + 2);
 
 	pb = pb_create(capacity);
 	departures = llist_create();
@@ -134,8 +145,11 @@ int main(int argc, char * argv[]){
 
 	rc= pthread_create(&monitor_t, NULL, monitor, NULL);
 
+	pthread_barrier_wait(&mybarrier);
 
 	pthread_join(monitor_t, &rc); //else main thread will go out.
+
+	pthread_barrier_destroy(&mybarrier);
 
 	llist_destroy(departures);
 	pb_destroy(pb);

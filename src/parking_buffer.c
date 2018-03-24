@@ -188,7 +188,7 @@ void pb_print(parking_buffer_t *pb){
 			if(ptr!=NULL)
 				printf("| %6ld",ptr->car_id);
 			else
-				printf("|       ");
+				printf("| %6d",0);
 		}
 
 		printf(" ]");
